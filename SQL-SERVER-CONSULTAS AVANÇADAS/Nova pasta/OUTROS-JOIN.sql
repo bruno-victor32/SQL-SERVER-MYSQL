@@ -1,0 +1,62 @@
+USE SUCOS_FRUTAS;
+
+--Contar quantos clientes eu tenho
+SELECT COUNT(*) FROM TABELA_DE_CLIENTES;
+--Nesse caso tenho 16 clientes
+
+--Contar quantos vendedores eu tenho
+SELECT COUNT(*) FROM TABELA_DE_VENDEDORES;
+--Nesse caso tenho 4 vendedores
+
+--Consulta que permite verificar quais os clientes e os vendedores que moram em
+--determinados bairros
+SELECT DISTINCT
+TV.NOME AS NOME_DO_VENDEDOR,
+TV.BAIRRO AS BAIRRO_DO_VENDEDOR,
+TC.NOME AS NOME_DO_CLIENTE,
+TC.BAIRRO AS BAIRRO_DO_CLIENTE
+FROM
+TABELA_DE_CLIENTES AS TC
+INNER JOIN
+TABELA_DE_VENDEDORES AS TV
+ON TC.BAIRRO = TV.BAIRRO;
+
+/*Consulta que permite verificar qual e o vendedor que não tem cliente no seu bairro*/
+SELECT DISTINCT
+TV.NOME AS NOME_DO_VENDEDOR,
+TV.BAIRRO AS BAIRRO_DO_VENDEDOR,
+TC.NOME AS NOME_DO_CLIENTE,
+TC.BAIRRO AS BAIRRO_DO_CLIENTE
+FROM TABELA_DE_CLIENTES AS TC RIGHT JOIN TABELA_DE_VENDEDORES AS TV
+ON TC.BAIRRO = TV.BAIRRO;
+
+SELECT DISTINCT
+TV.NOME AS NOME_DO_VENDEDOR,
+TV.BAIRRO AS BAIRRO_DO_VENDEDOR,
+TC.NOME AS NOME_DO_CLIENTE,
+TC.BAIRRO AS BAIRRO_DO_CLIENTE
+FROM TABELA_DE_CLIENTES AS TC RIGHT JOIN TABELA_DE_VENDEDORES AS TV
+ON TC.BAIRRO = TV.BAIRRO
+WHERE TC.NOME IS NULL;
+--Vendedor que tiver nome do cliente e bairro do cliente nulo e um cliente que n tem nenhum vendedor no seu bairro
+--Nenhum cliente mora no bairro de copacabana
+
+/*Qual e o cliente  que n possuem vendedores no seu bairro*/
+--Quero trazer todos os clientes mas somente alguns vendedores
+SELECT DISTINCT
+TV.NOME AS NOME_DO_VENDEDOR,
+TV.BAIRRO AS BAIRRO_DO_VENDEDOR,
+TC.NOME AS NOME_DO_CLIENTE,
+TC.BAIRRO AS BAIRRO_DO_CLIENTE
+FROM TABELA_DE_CLIENTES AS TC LEFT JOIN TABELA_DE_VENDEDORES AS TV
+ON TC.BAIRRO = TV.BAIRRO
+WHERE TV.NOME IS NULL;
+--Essa consulta vai retornar todos os clientes que não estão em bairros que tenham vendedores
+
+SELECT DISTINCT
+TV.NOME AS NOME_DO_VENDEDOR,
+TV.BAIRRO AS BAIRRO_DO_VENDEDOR,
+TC.NOME AS NOME_DO_CLIENTE,
+TC.BAIRRO AS BAIRRO_DO_CLIENTE
+FROM TABELA_DE_CLIENTES AS TC FULL JOIN TABELA_DE_VENDEDORES AS TV
+ON TC.BAIRRO = TV.BAIRRO;

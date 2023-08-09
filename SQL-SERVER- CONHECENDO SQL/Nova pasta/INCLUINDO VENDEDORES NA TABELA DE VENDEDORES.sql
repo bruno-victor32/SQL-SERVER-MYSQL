@@ -1,0 +1,12 @@
+USE SUCOS_VENDAS
+
+INSERT INTO TABELA_DE_VENDEDORES
+(NOME,MATRICULA,CIDADE,PERCENTUAL_COMISSÃO,DATA_INICIO,TEM_DEPENDENTE)
+VALUES
+('João da Silva','00241','São Paulo',0.06,'2022-12-01','TRUE'),
+('Carolina Soares','00242','Rio de Janeiro',0.07,'2020-03-13','TRUE'),
+('Juliana Marques','00243','São Paulo',0.09,'2018-11-14','FALSE'),
+('Pedro Gomes','00244','São Paulo',0.08,'2019-01-20','FALSE'),
+('Christina Rodrigues','00245','Rio de Janeiro',0.07,'2021-02-13','TRUE');
+
+SELECT*FROM TABELA_DE_VENDEDORES;

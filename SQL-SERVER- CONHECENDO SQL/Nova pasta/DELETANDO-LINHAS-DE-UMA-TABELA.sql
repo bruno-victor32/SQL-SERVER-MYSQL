@@ -1,0 +1,5 @@
+
+SELECT * FROM TABELA_DE_PRODUTOS;
+
+/*Deletando registros ou linhas de uma tabela*/
+DELETE FROM TABELA_DE_PRODUTOS WHERE CODIGO_DO_PRODUTO = '1078680';
