@@ -723,6 +723,8 @@ SELECT DISTINCT BAIRRO, 'FORNECEDOR' AS ORIGEM FROM TABELA_DE_VENDEDORES;
 
 									--HAVING
 
+--O having é usado quando nós queremos usar o resultado de uma agregação no nosso filtro.
+
 USE SUCOS_FRUTAS;
 
 SELECT * FROM TABELA_DE_CLIENTES;
@@ -818,3 +820,1409 @@ WHERE BAIRRO IN ('Copacabana', 'Jardins', 'Santo Amaro', 'Tijuca');
 
 SELECT BAIRRO FROM TABELA_DE_CLIENTES
 WHERE BAIRRO IN (SELECT DISTINCT BAIRRO FROM TABELA_DE_VENDEDORES);
+
+
+--SUBCONSULTAS SUBSTITUINDO O HAVING
+
+--Quando usamos sub query dentro de um from, eu sou obrigado a colocar alias.
+
+--Média do preço de lista por embalagens
+SELECT EMBALAGEM, AVG(PRECO_DE_LISTA) AS PRECO_MEDIO
+FROM TABELA_DE_PRODUTOS GROUP BY EMBALAGEM;
+
+--Quero saber as embalagens que são menores do que o preço médio igual a 10
+SELECT EMBALAGEM, AVG(PRECO_DE_LISTA) AS PRECO_MEDIO
+FROM TABELA_DE_PRODUTOS GROUP BY EMBALAGEM
+HAVING AVG(PRECO_DE_LISTA) <= 10;
+
+--Quero saber as embalagens que são menores do que o preço médio igual a 10
+--CONSULTA UTILIZANDO SUBQUERY
+SELECT MEDIA_EMBALAGENS.EMBALAGEM,
+MEDIA_EMBALAGENS.PRECO_MEDIO FROM
+(SELECT EMBALAGEM, AVG(PRECO_DE_LISTA) AS PRECO_MEDIO 
+FROM TABELA_DE_PRODUTOS GROUP BY EMBALAGEM) AS MEDIA_EMBALAGENS
+WHERE MEDIA_EMBALAGENS.PRECO_MEDIO <= 10;
+
+--DESAFIO TRANSFORMANDO HAVING EM SUBCONSULTAS
+
+--Antes de qualquer coisa, vamos separar a consulta que nos dá o valor das quantidades agrupadas.
+
+SELECT INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO, SUM(INF.QUANTIDADE) AS QUANTIDADE FROM ITENS_NOTAS_FISCAIS  INF
+INNER JOIN TABELA_DE_PRODUTOS TP 
+ON INF.CODIGO_DO_PRODUTO = TP.CODIGO_DO_PRODUTO
+GROUP BY INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO;
+
+--Observação importante: Não se esqueça de incluir um apelido para SUM(QUANTIDADE) e outro para a consulta que ficará dentro do FROM.
+SELECT SC.CODIGO_DO_PRODUTO, SC.NOME_DO_PRODUTO, SC.QUANTIDADE_TOTAL
+FROM
+(SELECT INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO, SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL FROM ITENS_NOTAS_FISCAIS  INF
+INNER JOIN TABELA_DE_PRODUTOS TP 
+ON INF.CODIGO_DO_PRODUTO = TP.CODIGO_DO_PRODUTO
+GROUP BY INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO) SC;
+
+--Finalmente, portanto, aplicamos a ordenação e o filtro.
+
+SELECT SC.CODIGO_DO_PRODUTO, SC.NOME_DO_PRODUTO, SC.QUANTIDADE_TOTAL
+FROM
+(SELECT INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO, SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL FROM ITENS_NOTAS_FISCAIS  INF
+INNER JOIN TABELA_DE_PRODUTOS TP 
+ON INF.CODIGO_DO_PRODUTO = TP.CODIGO_DO_PRODUTO
+GROUP BY INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO) SC
+WHERE SC.QUANTIDADE_TOTAL > 394000 
+ORDER BY SC.QUANTIDADE_TOTAL DESC;
+
+------ VISÃO - VIEW
+
+
+USE SUCOS_FRUTAS;
+
+--Criando uma View/ Recomendado deixar essa view na primeira linha do seu Script
+CREATE VIEW MEDIA_EMBALAGENS AS 
+SELECT EMBALAGEM, AVG(PRECO_DE_LISTA) AS PRECO_MEDIO 
+FROM TABELA_DE_PRODUTOS GROUP BY EMBALAGEM
+
+SELECT * FROM MEDIA_EMBALAGENS;
+
+--Quero saber as embalagens que são menores do que o preço médio igual a 10
+--CONSULTA UTILIZANDO SUBQUERY
+SELECT MEDIA_EMBALAGENS.EMBALAGEM,
+MEDIA_EMBALAGENS.PRECO_MEDIO FROM
+(SELECT EMBALAGEM, AVG(PRECO_DE_LISTA) AS PRECO_MEDIO 
+FROM TABELA_DE_PRODUTOS GROUP BY EMBALAGEM) AS MEDIA_EMBALAGENS
+WHERE MEDIA_EMBALAGENS.PRECO_MEDIO <= 10;
+
+--Quero saber as embalagens que são menores do que o preço médio igual a 10
+--CONSULTA UTILIZANDO VISÃO/VIEW, e a mesma consulta acima, só muda que utilizo view
+SELECT  EMBALAGEM, PRECO_MEDIO
+FROM MEDIA_EMBALAGENS
+WHERE PRECO_MEDIO <= 10;
+
+--DESAFIO USANDO VISÃO PARA SUBSTITUIR O HAVING
+
+--Redesenhe esta consulta criando uma visão para a lista de quantidades totais por produto e aplicando a condição e ordenação sobre esta mesma visão.
+SELECT INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO, SUM(INF.QUANTIDADE) AS QUANTIDADE FROM ITENS_NOTAS_FISCAIS  INF
+INNER JOIN TABELA_DE_PRODUTOS TP 
+ON INF.CODIGO_DO_PRODUTO = TP.CODIGO_DO_PRODUTO
+GROUP BY INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO HAVING SUM(INF.QUANTIDADE) > 394000 
+ORDER BY SUM(INF.QUANTIDADE) DESC;
+
+--1° Passo: Vamos criar a visão com a consulta que retorna as quantidade agregadas. Não se esqueça de criar um apelido para o agregador SUM(QUANTIDADE).
+CREATE VIEW VW_QUANTIDADE_PRODUTOS AS SELECT INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO, 
+SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL FROM ITENS_NOTAS_FISCAIS  INF
+INNER JOIN TABELA_DE_PRODUTOS TP 
+ON INF.CODIGO_DO_PRODUTO = TP.CODIGO_DO_PRODUTO
+GROUP BY INF.CODIGO_DO_PRODUTO, TP.NOME_DO_PRODUTO;
+
+--2° Passo: Consulta redesenhada, utilizando a visão
+SELECT * FROM VW_QUANTIDADE_PRODUTOS
+WHERE QUANTIDADE_TOTAL > 394000 
+ORDER BY QUANTIDADE_TOTAL DESC;
+
+--FUNÇÕES NO SQL
+
+--Tipos de Funções
+
+--Strings (Textos)
+--Datas
+--Matematicas
+--Conversão de dados
+
+--Funções no SQL do tipo Texto
+
+ --A função "LOWER" pega um string ou uma expressão de caracteres 
+ --e vai converter essa expressão de caracteres apenas para caracteres
+ --minúsculos. Para usar a função, coloco lower e entre aspas simples
+ --o campo ou o texto que eu quero aplicar a função.
+
+ SELECT NOME, LOWER(NOME) AS NOME_MINUSCULO FROM TABELA_DE_CLIENTES;
+
+ --A próxima função é a "UPPER", que é o inverso do LOWER. Essa função vai
+ --pegar uma expressão de caracteres e vai converter tudo que é minúsculo
+ --em maiúsculo.
+
+  SELECT NOME, LOWER(NOME) AS NOME_MINUSCULO, UPPER(NOME) AS NOME_MAIUSCULO FROM TABELA_DE_CLIENTES;
+
+  SELECT NOME,UPPER(NOME) AS NOME_MAIUSCULO FROM TABELA_DE_CLIENTES;
+
+ --A função CONCAT vai retornar uma cadeia de caracteres ou uma string,
+ --resultante da concatenação, ou seja, da junção de dois ou mais outros 
+ --valores de caracteres.
+ --Uma observação: o SQL Server também aceita que eu pegue esses strings 
+ --e coloque entre eles o símbolo de somar.
+
+ SELECT NOME, CONCAT(ENDERECO_1, ' ', BAIRRO, ' ',CIDADE, ' ', ESTADO, ' - ', CEP) AS ENDERECO_COMPLETO
+ FROM TABELA_DE_CLIENTES;
+
+ --Outra maneira de fazer a mesma consulta acima
+  SELECT NOME, ENDERECO_1 + ' ' + BAIRRO + ' ' + CIDADE + ' ' + ESTADO + ' - ' + CEP AS ENDERECO_COMPLETO
+ FROM TABELA_DE_CLIENTES;
+
+ --A função RIGHT vai retornar a parte direita de uma cadeia de caracteres, 
+ --usando como parâmetro o número de caracteres especificados na segunda parte da função.
+
+ --A função LEFT faz o inverso do RIGHT, retornando a parte esquerda de uma cadeia de caracteres,
+ --sempre usando o número de caracteres especificados no segundo parâmetro da função. 
+
+ --Consulta que vai retornar os três primeiros caracteres
+ SELECT NOME_DO_PRODUTO, LEFT(NOME_DO_PRODUTO,3) AS TRES_PRIMEIROS_CHAR FROM TABELA_DE_PRODUTOS;
+
+ --A função REPLICATE vai repetir o valor de caracteres que está na função, usando como parâmetro 
+ --o número especificado como número de vezes.
+
+ --O replace vai substituir um conjunto de caracteres por outro especificado.
+
+ --Aonde tiver Litros será substituido por L
+ SELECT TAMANHO, REPLACE(TAMANHO, 'Litros', 'L') AS TAMANHO_MODIFICADO FROM TABELA_DE_PRODUTOS;
+
+--Utilizando função dentro de uma função
+--Aonde tiver Litros será substituido por L
+--Aonde tiver Litro "no singular" também será substituido por L
+  SELECT TAMANHO, REPLACE((REPLACE(TAMANHO, 'Litros', 'L')), 'Litro', 'L') AS TAMANHO_MODIFICADO FROM TABELA_DE_PRODUTOS;
+
+
+ --A função SUBSTRING vai retornar uma parte da expressão de caracteres, partindo do ponto inicial 
+ --que será passado como parâmetro para a função e o número de caracteres a serem extraídos.
+
+ --A função LTRIM remove os caracteres que são espaços
+
+ --A função RTRIM faz a mesma coisa que o ltrim, porém do lado direito.
+
+ --A função TRIM remove tanto os espaços da esquerda quanto os espaços da direita:
+
+ --O REPLACE vai substituir um conjunto de caracteres por outro especificado.
+
+ --O LEN retorna o número de caracteres do texto que está sendo especificado, excluindo os espaços que possam haver à direita.
+
+ ----- DESAFIO - BUSCANDO UM PEDAÇO DE UM TEXTO
+
+ USE SUCOS_FRUTAS;
+
+--Conforme vimos nas aulas sobre funções de texto, observe a seguinte frase abaixo:
+--CIDADE DO RIO DE JANEIRO
+--Como seria a função para retirar deste texto somente a palavra RIO?
+--Resposta
+SUBSTRING('CIDADE DO RIO DE JANEIRO', 11, 3)
+
+
+----------------- Desafio: separando nome e sobrenome
+
+SELECT * FROM TABELA_DE_CLIENTES;
+
+--Nas aulas relacionadas às funções de texto, observamos a tabela de 
+--cliente onde podemos listar os nomes.
+
+--Note que os nomes e sobrenomes são separados por um espaço.
+
+--Sendo assim, faça uma consulta que traga somente o primeiro nome de 
+--cada cliente.
+
+--Dica: Como foi dito pelo instrutor existem diversas funções do SQL Server 
+--e muitas vezes não sabemos todas. Por isso, para resolver este problema 
+--pesquise sobre a função CHARINDEX, veja como ela funciona, e aplique para 
+--resolver este problema.
+
+--1° PASSO:
+--Primeiro, vamos localizar o primeiro espaço do nome. Sua posição. 
+--Para isso, basta executar a função CHARINDEX
+-- Isso ' ' que dizer que estou procurando aonde tem espaço
+-- Estou procurando na coluna "NOME"
+-- A pesquisa vai iniciar da posição "1"
+SELECT NOME, CHARINDEX(' ',NOME, 1) FROM TABELA_DE_CLIENTES;
+
+--2° PASSO:
+--Usando a função SUBSTRING podemos buscar parte do texto que compõe 
+--o nome completo buscando da posição 1 a posição do primeiro espaço.
+
+SELECT NOME, SUBSTRING(NOME, 1, CHARINDEX(' ', NOME, 1)) FROM TABELA_DE_CLIENTES;
+
+SELECT NOME,SUBSTRING(NOME, 1, CHARINDEX(' ',NOME)) AS PRIMEIRO_NOME FROM TABELA_DE_CLIENTES;
+
+--3° Passo
+--Quero que retorne, o primeiro e o segundo nome
+SELECT NOME, LEFT(NOME, CHARINDEX(' ', NOME)) AS [PRIMEIRO NOME],
+RIGHT(NOME, LEN(NOME) - CHARINDEX(' ', NOME)) AS [SOBRENOME]
+FROM TABELA_DE_CLIENTES;
+
+--Utilizei a função LEFT para retornar o primeiro nome em conjunto com a função CHARINDEX. 
+--De quebra ainda adicionei na query o último nome também.
+--O número 20 indica o tamanho da string retornada da função da substring. 
+--Então, a função charindex localiza o primeiro espaço dentro da coluna nome 
+--e com a função substring eu começo a contar a quantidade de caracteres depois da
+--localização até no máximo 20. Dessa forma não fica limitado somente o retorno da 
+--quantidade de caracteres contados pela função charindex.
+
+SELECT CPF, LEFT(NOME,CHARINDEX(' ',NOME)) AS PRIMEIRO_NOME,
+SUBSTRING(NOME, CHARINDEX(' ',NOME), 20 ) AS ULTIMO_NOME,
+NOME AS NOME_COMPLETO
+FROM TABELA_DE_CLIENTES;
+
+-------- FUNÇÕES DE DATA E HORA
+
+/*DATEADD - Essa função adiciona um número (um inteiro com sinal positivo
+ou negativo) a um datepart de uma data de entrada e retorna um valor de 
+data/hora modificado*/
+
+/*DATEPART é uma parte da data, o datepart pode ser a palavra year, quarter,
+month, dayofyear, day, week, hour, minute, second, milisecond, microsecond, 
+nanosecond*/
+
+/*DATEPART pode ser usada sobre as funções "dateadd" e "datediff"*/
+
+/*EXEMPLO:
+
+Eu escrevo dateadd e escolho um datepart que nesse caso e o "day". 
+Então se eu escrever day, passar como parâmetro um número inteiro positivo 
+ou negativo, no caso eu escolhi um positivo, o valor 30, e uma data, ele vai somar 30 dias àquela data:
+
+DATEADD(DAY, 30, '2022-01-01')
+
+Então, o resultado será aquela mesma data 30 dias para frente:
+
+2022-01-31
+
+Se eu tivesse escolhido o datepart month, ele irá somar 30 meses à data, então ele vai sempre somar ou diminuir, 
+dependendo se o valor passado como parâmetro for positivo ou negativo.
+*/
+
+/*DATEDIFF - Essa função retorna a contagem (como um valor inteiro com sinal)
+dos limites de datepart especificados cruzados entre os parâmetros especificados
+startdate e enddate
+
+Função datediff vai retornar um número, que é um valor inteiro, que pode ser positivo ou negativo, que expressa
+os dateparts da diferença entre duas datas.
+
+EXEMPLO:
+
+DATA INICIAL '2022-01-01'
+DATA FINAL   '2022-04-12'
+DATEDIFF(DAY, '2022-01-01', '2022-04-12')
+
+A função DATEDIFF calculará a diferença entre essas duas datas e mostrará 
+o resultado expresso em dias, porque o datepart escolhido foi day. 
+Se eu tivesse escrito month, o resultado da diferença entre essas duas 
+datas seria expresso em meses, e assim por diante.
+
+Logo, o resultado do exemplo seria 101 dias.
+*/
+
+
+/*DATEPART - Essa função retorna um inteiro que representa o datepart
+especificado do argumento date especificado
+
+Com a função datepart, passamos uma data e posso ver o ano, o mês, o dia, 
+a hora, o minuto dessa data. Então se eu escrevo:
+
+DATEPART(DAY, '2022-01-01')
+
+Nos será retornado o dia dessa data, logo o resultado será 1.
+*/
+
+/*GETDATE - Retorna o carimbo de data/hora do sistema do banco de dados atual
+ como um valor de datetime sem o deslocamento de fuso horário do banco de dados
+ Esse valor é derivado do sistema operacional do computador no qual a instância
+ do SQL Server está sendo executada
+ 
+ A função getdate vai retornar a data do computador de onde a instância do banco de 
+ dados está rodando. Então se eu executo a função GETDATE(), por exemplo, eu vou ter a
+ data, a hora, o minuto, o segundo e o milissegundo do momento em que eu executei a função.*/
+
+ /*
+ DAY - Esta função retorna um inteiro que representa o dia (dia do mês) 
+ da data especificada.
+ MONTH - Retorna um inteiro que representa o mês da data especificada
+ YEAR - Retorna um inteiro que representa o ano da data especificada
+
+ A função day, se eu colocar DAY(DATE), eu vou ver o dia da data. Semelhante à função datepart,
+ quando eu uso day como parâmetro.
+
+Na função month, eu vou ver o mês da data e na função year, verei o ano da data.*/
+
+/*
+ISDATE - Retornará 1 se a expressão for um valor datetime, válido; caso
+contrário, 0.
+
+ A função isdate testa para saber se a expressão passada por parâmetro é uma data 
+ válida ou não. Então por exemplo, se eu escrevo:
+
+ ISDATE('2022-02-31')
+
+ A data 31 de fevereiro de 2022 não existe, então o resultado vai ser o número 0, de falso.
+
+Se a data fosse válida, a função isdate retornaria o número 1.
+*/
+
+/*DATETIMEFROMPARTS - Essa função retorna um valor datetime para os
+argumentos de data e hora especificados
+
+A função datetimefromparts vai retornar uma data baseado em inteiros 
+separados por vírgula, onde eu vou expressar o ano, o mês, o dia, 
+a hora, o minuto, o segundo e o milissegundo:
+
+DATETIMEFROMPARTS( year, month, day, hour, minute, seconds, milliseconds)
+
+Então se eu escrevo:
+
+DATETIMEFROMPARTS(2022, 12, 14, 15, 34, 22, 30)
+
+Ou seja, eu quero que essa função retorne uma data onde o ano é 2022, o mês é 12, o dia 
+é 14 e assim por diante:
+
+2022-12-14 15:34:22.030
+
+*/
+
+USE SUCOS_FRUTAS;
+
+/*
+
+
+Executando essa consulta, o resultado será a data e hora do computador*/
+SELECT GETDATE();
+
+--Vamos pegar o dia atual e somar dez dias:
+SELECT DATEADD(DAY, 10, GETDATE());
+
+--Vamos pegar o dia atual e somar dez dias:
+SELECT GETDATE() AS DATA_HOJE, DATEADD(DAY, 10, GETDATE()) AS DATA_DAQUI_10_DIAS;
+
+--Se eu quiser saber qual data representa 48 dias atrás, basta eu fazer:
+SELECT DATEADD(DAY,-48, GETDATE()) AS DATA_48_DIAS_ATRAS
+
+SELECT DATEADD(DAY,-48, GETDATE()) AS DATA_48_DIAS_ATRAS,
+DATEDIFF(DAY, '2023-01-01', GETDATE()) AS DIAS_DESDE_INICIO_ANO;
+
+--Eu quero saber por exemplo quantos dias se passaram desde o primeiro dia do ano:
+SELECT DATEDIFF(DAY, '2023-01-01', GETDATE()) AS DIAS_DESDE_INICIO_ANO;
+
+--então se eu quiser ver o número de horas desde o primeiro dia do ano:
+SELECT DATEDIFF(HOUR, '2023-01-01', GETDATE()) AS HORAS_DESDE_INICIO_ANO;
+
+--então se eu quiser ver o número de meses desde o primeiro mês do ano:
+SELECT DATEDIFF(MONTH, '2023-01-01', GETDATE()) AS MESES_DESDE_INICIO_ANO;
+
+--Com a função datepart, posso pegar o dia de hoje, do momento que eu executo a função:
+SELECT DATEPART(DAY, GETDATE()) AS DIA_DE_HOJE;
+
+SELECT GETDATE() AS DATA_HOJE, DATEPART(DAY, GETDATE()) AS DIA_DE_HOJE;
+
+--Eu posso, por exemplo, testar para saber se uma data é válida ou não:
+SELECT ISDATE(DATETIMEFROMPARTS(2022, 02, 28, 00, 00, 00, 00));
+
+--Calculando o número de anos que uma pessoa viveu desde o seu nascimento?
+SELECT NOME, 
+DATEDIFF(YEAR, DATA_DE_NASCIMENTO, GETDATE()) AS NUMERO_DE_ANOS_DE_VIDA 
+FROM TABELA_DE_CLIENTES;
+
+--Calculando o número de anos que a pessoa de cpf  1471156710 viveu desde o seu nascimento?
+SELECT NOME, 
+DATEDIFF(YEAR, DATA_DE_NASCIMENTO, GETDATE()) AS NUMERO_DE_ANOS_DE_VIDA 
+FROM TABELA_DE_CLIENTES
+WHERE CPF = '1471156710';
+
+--DESAFIO DATA POR EXTENSO
+
+--Consulta que retornar o nome do cliente e sua data de nascimento por 
+--extenso dia, dia da semana, mês e ano
+SELECT NOME + ' nasceu em ' + 
+DATENAME (WEEKDAY,DATA_DE_NASCIMENTO) + ',' +
+DATENAME (DAY,DATA_DE_NASCIMENTO) + ' de ' +
+DATENAME(MONTH, DATA_DE_NASCIMENTO) + ' de ' +
+DATENAME(YEAR, DATA_DE_NASCIMENTO) AS DATA_EXTENSO
+FROM TABELA_DE_CLIENTES;
+
+-----------FUNÇÕES NUMÉRICAS
+
+/*
+ROUND - Retorna um valor numérico, arredondado, para o comprimento ou
+precisão especificados
+O ROUND, que retorna um valor numérico arredondado, usando o comprimento 
+de precisão de arredondamento, passado como segundo parâmetro da função. 
+Então por exemplo, se eu quiser arredondar o número 32,23332 com duas casas decimais:
+
+ROUND(32.23332, 2)
+
+Ele vai me retornar o número 32,23.As outras casas decimais ele vai zerar.
+
+
+O CEILING retorna o menor inteiro maior que ou igual à expressão numérica
+identificada. Então, se eu tiver o número 32,23332 e eu aplicar o CEILING:
+
+CEILING(32.23332)
+
+A parte inteira é 32, então o resultado vai ser 33, que é o menor inteiro,
+maior do que o inteiro existente.
+Então se o inteiro existente é 32, o resultado vai ser 33.
+
+Já a função CEILING() desempenha a função oposta, arredondando um número 
+para cima e aproximando-o ao inteiro subsequente. Por exemplo, ao empregar 
+CEILING(1.6), o retorno será 2.
+
+
+O FLOOR vai fazer o contrário do CEILING, ele vai retornar o maior inteiro,
+menor ou igual que a expressão numérica especificada. Então se eu tenho:
+
+FLOOR(32,23332)
+
+O menor inteiro vai ser o próprio 32.
+
+A função FLOOR() realiza um arredondamento para baixo, levando o número 
+ao inteiro imediatamente inferior. Por exemplo, ao aplicar FLOOR(1.6), 
+o resultado será 1.
+
+
+O POWER vai retornar a potência, vai ser um número elevado a um fator.
+Então se eu fizer:
+
+POWER(2, 10)
+
+É a mesma coisa que 2 elevado a 10, que vai dar o resultado de 1024.
+
+
+EXP - Retorna o valor  exponencial da expressão float especificada.
+O EXP vai retornar o valor exponencial da expressão passada por parâmetro
+para a função. É baseada na constante e (2,71828182845905), que é a base dos
+logaritmos naturais.
+O expoente de um número é a constante e elevada à potência do número passado por parâmetro.
+E aí se eu colocar, por exemplo:
+
+EXP(10)
+
+Eu vou pegar aquele o número 2,71828182845905 e elevá-lo a 10, 
+tendo 22026,4657948067 como resultado. Então, para fórmulas matemáticas, 
+essa função é super importante.
+
+
+A função SQRT resolve a raiz quadrada, então ele resolve a raiz quadrada 
+do valor flutuante que foi passado por parâmetro para a função. Então, se eu fizer:
+
+SQRT(144)
+
+O resultado será 12, porque a raiz quadrada de 144 é 12.
+
+
+SIGN - Retorna o sinal positivo (+1), zero (0) ou sinal negativo (-1) da
+expressão especificada
+O SIGN vai retornar um sinal positivo ou negativo, dependendo do sinal do 
+número passado por parâmetro para a função. Então se o número for positivo,
+ele vai retornar 1, se o número é negativo ele vai retornar -1:
+
+SIGN(-10)
+
+Como -10 é negativo, essa função retornará o número -1.
+
+
+
+O ABS vai retornar o valor absoluto(valor positivo do número) e sempre positivo da expressão 
+numérica que foi passada por parâmetro para a função.
+ABS altera valores negativos para valores positivos.
+ABS não tem efeito em valores zero ou positivos
+Então se eu tenho:
+
+ABS(-10)
+
+A função vai retornar o número 10. Então, sempre vai ser o valor absoluto,
+o valor positivo do número.
+
+O PERCENT é uma função que calcula o resto da divisão entre dois números:
+
+dividendo % divisor
+
+Assim, eu tenho resto.
+Por exemplo: 10 % 3 é o resto da divisão de 10 por 3, que será 1.
+
+
+Eu tenho uma série de outras funções que eu posso usar no SQL Server, relacionados com outras partes da matemática ou geometria:
+
+LOG, que retorna o logaritmo natural de uma expressão float, passada por parâmetro para a função.
+LOG10, que retorna o logaritmo na base 10 da expressão float passada por parâmetro para a função.
+Funções aritméticas como: ACOS, ATAN, ASIN, COS, TAN e SIN.
+PI, que retorna o número PI, que é muito importante na geometria, principalmente para calcular raios ou áreas de círculo, etc.
+*/
+
+/*Estou fazendo o arredondamento dos números*/
+SELECT ROUND(3.437,2),ROUND(3.433,2);
+
+/*Consulta que vai retornar o maior inteiro, depois do inteiro do número
+O inteiro do número e 3, então ele exibe 4*/
+SELECT CEILING(3.433);
+
+--Consulta que vai retornar o próprio número inteiro do número, ou sejá,
+--nesse caso vai retornar o 3*/
+SELECT FLOOR(3.433);
+
+SELECT POWER(12, 2);
+
+SELECT EXP(3);
+
+--Raiz quadrada de 300
+SELECT SQRT(300);
+
+--Converter qualquer número negativo em positivo
+SELECT ABS(-10);
+
+/*DESAFIO: formato do faturamento
+Na tabela de notas fiscais, temos o valor do imposto. 
+Já na tabela de itens, temos a quantidade e o faturamento. 
+Calcule o valor do imposto pago no ano de 2016, arredondando 
+para o menor inteiro.*/
+
+SELECT * FROM NOTAS_FISCAIS;
+SELECT * FROM ITENS_NOTAS_FISCAIS;
+
+SELECT YEAR(DATA_VENDA) AS ANO, FLOOR(SUM(IMPOSTO * (QUANTIDADE * PRECO))) 
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF ON NF.NUMERO = INF.NUMERO
+WHERE YEAR(DATA_VENDA) = 2016
+GROUP BY YEAR(DATA_VENDA);
+
+SELECT YEAR(NF.DATA_VENDA) AS ANO,
+FLOOR(SUM((INF.QUANTIDADE * INF.PRECO) * NF.IMPOSTO)) AS IMPOSTO_PAGO
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+WHERE DATA_VENDA BETWEEN '2016-01-01' AND '2016-12-31'
+GROUP BY YEAR(DATA_VENDA);
+
+SELECT YEAR(NF.DATA_VENDA), FLOOR(SUM(NF.IMPOSTO*INF.QUANTIDADE*INF.PRECO)) AS IMPOSTO_TOTAL
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+WHERE YEAR(NF.DATA_VENDA)=2016
+GROUP BY YEAR(NF.DATA_VENDA)
+
+---------- Funções de Conversão ---------
+
+
+
+/*
+
+CAST e CONVERT - Essas funções convertem uma expressão de um tipo de dados
+em outro.
+
+Conversão de data para texto
+
+No caso da conversão de data para texto, eu uso a função CONVERT.
+E por que a conversão de data para texto é importante? 
+Porque muitas vezes eu quero representar a data de uma maneira 
+diferente do que a data é representada dentro do SQL Server. 
+Lembra que a data no SQL Server é representada da seguinte forma:
+ANO (4 dígitos)-MÊS (2 dígitos)-DIA (2 dígitos).
+
+E nem sempre, quando eu quero executar uma consulta SQL,
+eu quero exibir a data neste formato. Eu quero mudar o formato 
+de exibição, então isso é uma conversão de data para texto, 
+usando uma determinada máscara. 
+E como é que eu defino essa máscara para o SQL Server?
+Através de uma numeração.
+Existe um número que pode começar do 1 ou do 100 e ele vai crescente,
+e cada número desse vai representar uma máscara de saída.
+
+Link para consultar
+https://learn.microsoft.com/pt-br/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver16
+
+O CAST eu posso usar para fazer conversão de números para números.
+Então eu posso pegar um número, converter de inteiro para money, de money 
+para decimal, de decimal para float e assim por diante.
+
+OBSERVAÇÕES:
+Para conversões explícitas, a própria instrução determina o tipo 
+de dado resultante, então, quando eu faço a conversão explícita, 
+eu não preciso dizer qual é o tipo de dado que está sendo convertido.
+
+Já para conversões implícitas, eu tenho que atribuir qual 
+é o tipo de dado que eu quero converter.
+
+*/
+
+
+/*
+Estou convertendo a data atual em texto
+
+Como eu estou convertendo uma data para texto, 
+eu preciso especificar o tipo desse texto, 
+por exemplo VARCHAR(10).
+E especificamos a máscara 121 (yyyy-mm-dd hh:mi:ss.mmm).
+
+Note que eu só estou vendo o dia, por quê? 
+Porque o tamanho da máscara é de 23  caracteres "(yyyy-mm-dd hh:mi:ss.mmm)", 
+mas nós definimos um VARCHAR(10), então ele só exibiu os 
+dez primeiros caracteres dessa máscara.*/
+SELECT CONVERT(VARCHAR(10), GETDATE(), 121);
+
+/*Para utilizar essa máscara 121, preciso aumentar o tamanho do VARCHAR,
+como, por exemplo, 25 caracteres:
+Quando eu vou converter uma data para texto, 
+é importante que eu coloque a definição do texto com o número 
+de caracteres que coincida com o tamanho final da máscara.*/
+SELECT CONVERT(VARCHAR(25), GETDATE(), 121);
+
+USE SUCOS_FRUTAS;
+GO
+SELECT * FROM TABELA_DE_CLIENTES;
+
+/*Nós temos o campo DATA_DE_NASCIMENTO, que é a data de nascimento do cliente. 
+Podemos converter essa data:
+
+Se eu executar isso daqui, teremos um resultado diferente do esperado. 
+Aí você pode perguntar: "mas colocamos o tamanho do VARCHAR como 25, então por
+que a hora, o minuto e o segundo não foram exibidos?". 
+Porque se nós olharmos o tipo original desse campo "DATA_DE_NASCIMENTO", ele é um campo date e não datetime.
+
+Então, essa data de nascimento que está na tabela, ela não tem hora, 
+minuto e segundo gravada, porque o tipo date não comporta hora, minuto,
+segundo e milissegundo. Então não adianta usar uma máscara para exibir hora,
+minuto, segundo e milissegundo, se o campo que está gravado na tabela não tem isso.
+
+
+*/
+SELECT DATA_DE_NASCIMENTO, CONVERT(VARCHAR(25), DATA_DE_NASCIMENTO, 121)
+FROM TABELA_DE_CLIENTES;
+
+
+/*Nós temos o campo DATA_DE_NASCIMENTO, que é a data de nascimento do cliente. 
+Podemos converter essa data:
+Agora, se nós escolhermos uma outra máscara, por exemplo, a 106 (dd mon yyyy):
+Eu consigo ver então a data de nascimento do cliente no formato escolhido, olhando o mês em três letras.
+*/
+SELECT DATA_DE_NASCIMENTO, CONVERT(VARCHAR(25), DATA_DE_NASCIMENTO, 106) 
+FROM TABELA_DE_CLIENTES;
+
+/* Outra coisa, por exemplo, eu tenho o nome do produto e o preço de lista na tabela de produtos:
+*/
+SELECT NOME_DO_PRODUTO, PRECO_DE_LISTA FROM TABELA_DE_PRODUTOS;
+
+/*Digamos que eu queira escrever um texto, em vez de exibir apenas 
+o preço do produto, eu vou escrever um texto dizendo "O preço de lista é tal preço",
+um texto mais bonito para aparecer na tabela.
+
+Então eu poderia usar a função CONCAT, onde eu escreverei:
+
+Ao executar, note que foi feita uma conversão implícita. Ele automaticamente converteu o 
+preço de lista, que é um float, em texto.
+*/
+SELECT NOME_DO_PRODUTO, CONCAT('O preço de lista é: ', PRECO_DE_LISTA) AS PRECO 
+FROM TABELA_DE_PRODUTOS;
+
+
+/*Mas se eu quisesse converter de forma explícita, bastaria eu ter feito:
+
+Então eu estou convertendo o preço de lista em um VARCHAR(10). 
+Isso é uma conversão onde eu estou dizendo qual é o tipo que eu quero escrever. 
+Não preciso usar o cast, porque se olharmos novamente a tabela de conversões, 
+o float é convertido implicitamente para texto.
+
+Na conversão implícita, eu posso fazer essa conversão de forma automática. 
+Essa regra às vezes não funciona direito, não no caso de data, mas pode ser
+um tipo especial que não funciona, então a primeira coisa que você pode estar 
+testando é usar o concat: se der erro e não funcionar, você usa o cast,
+pegando o campo e convertendo para o novo tipo que quiser.
+*/
+
+SELECT NOME_DO_PRODUTO, 
+CONCAT('O preço de lista é: ', CAST(PRECO_DE_LISTA AS VARCHAR(10))) AS PRECO 
+FROM TABELA_DE_PRODUTOS;
+
+---=========Desafio: listando expressão natural
+/*
+Queremos construir um SQL cujo resultado seja para cada cliente:
+
+"O cliente João da Silva comprou R$ 121222,12 no ano de 2016".
+Faça isso somente para o ano de 2016.
+
+Dica: Procure na documentação como se usa a função STR para converter um número FLOAT em texto.
+
+Depois de entender a função SRT podemos construir a seguinte consulta:
+*/
+SELECT 'O cliente ' + TC.NOME + ' comprou R$ ' + 
+TRIM(STR(SUM(INF.QUANTIDADE * INF.PRECO) ,10,2)) + ' no ano de ' + DATENAME(YEAR, NF.DATA_VENDA)
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF ON NF.NUMERO = INF.NUMERO
+INNER JOIN TABELA_DE_CLIENTES TC ON NF.CPF = TC.CPF
+WHERE YEAR(NF.DATA_VENDA) = '2016'
+GROUP BY TC.NOME, NF.DATA_VENDA;
+
+
+------VENDAS VALIDAS --------------
+
+/* Eu quero fazer um relatório para poder ver, dentro de um determinado mês, quais foram os 
+clientes que ultrapassaram ou não esse volume de compra. 
+Então esse é o meu problema, alguém chegou para mim e disse: "olha, me vê dentro de um 
+mês quais foram os clientes que compraram mais do que o volume de compra especificado para eles".
+
+Inicialmente calculando o volume de venda por cliente.
+
+Então a primeira coisa que eu vou fazer: eu vou selecionar o CPF, que é o cliente, e a data da venda, 
+ambos campos da tabela de notas fiscais, e vou selecionar a quantidade que eu vendi, que estão na tabela
+de itens das notas fiscais. Logo, como eu preciso selecionar três campos, sendo que um deles está em uma 
+tabela e dois em outra, o que eu preciso fazer um inner join.
+
+O campo em comum entre essas duas tabelas? É o campo NUMERO, é o que liga essas duas tabelas, 
+então ele vai ser o critério do join:
+Na tabela de notas fiscais, eu quero ver o CPF e a data da venda e da tabela de itens, eu quero ver a quantidade
+
+Tenho quantas vendas foi realizada na data e por qual pessoa*/
+
+SELECT NF.CPF, NF.DATA_VENDA, INF.QUANTIDADE
+FROM NOTAS_FISCAIS AS NF
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF
+ON NF.NUMERO = INF.NUMERO;
+
+/*Eu preciso ter essa informação dentro do mês e do ano. 
+Então a primeira coisa que eu vou fazer é escrever a data
+só com mês e ano. Nós podemos usar o "convert" para isso,
+utilizando a máscara 120 (yyyy-mm-dd hh:mi:ss) e limitando 
+o tamanho do VARCHAR para 7, assim que só exibirei o ano e o mês:*/
+
+SELECT NF.CPF,
+CONVERT (VARCHAR(7),NF.DATA_VENDA, 120) AS MES_ANO, --Nesse caso quero que mostre somente o mês e o ano da venda 
+INF.QUANTIDADE
+FROM NOTAS_FISCAIS AS NF
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF
+ON NF.NUMERO = INF.NUMERO;
+
+/*Mas eu preciso ter isso agrupado, porque eu preciso calcular 
+a soma total das quantidades dentro do mês e do ano, porque eu 
+preciso comparar com o volume do cadastro, que é o volume que está,
+por contrato, acertado para o cliente comprar no mês.
+
+
+ Nós vamos fazer aqui um SUM, eu vou somar a quantidade, 
+ chamando de quantidade total:
+ 
+ A partir do momento que eu coloquei um SUM, eu sou obrigado
+ a usar um group by, mas por quais campos? 
+ Pela chave, que é onde eu vou somar, que é o CPF e pela 
+ data da venda, convertida para mês e ano.*/
+
+ SELECT NF.CPF, 
+CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO, 
+SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL 
+FROM NOTAS_FISCAIS AS NF 
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+ON NF.NUMERO = INF.NUMERO
+GROUP BY
+NF.CPF, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120);
+
+--O cpf 9283760794 comprou no mes_ ano de 2016-04 a quantidade total de 23352 litros de suco
+
+/*Vamos olhar a tabela de clientes, onde eu tenho o CPF, 
+o nome do cliente e o volume de compra:*/
+
+SELECT CPF, NOME, VOLUME_DE_COMPRA FROM TABELA_DE_CLIENTES;
+
+/*
+
+Preciso comparar o volume de compra que foi acertado com o cliente no
+inicio do contraro.
+Nesse caso estou verificando com a consulta abaixo essa situação
+
+SELECT CPF, NOME, VOLUME_DE_COMPRA FROM TABELA_DE_CLIENTES;
+
+Com essa consulta abaixo estou verificando a quantidade de vendas que o cliente fez no meses e anos.
+
+  SELECT NF.CPF, 
+CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO, 
+SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL 
+FROM NOTAS_FISCAIS AS NF 
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+ON NF.NUMERO = INF.NUMERO
+GROUP BY
+NF.CPF, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120);
+
+Isso tudo para verificar se o cliente não comprou mais que o combinado no 
+inicio do contrato
+
+Para fazer uma consulta que retorne o volume de compra que foi combinado
+no contrato, com a quantidade de vendas que o cliente está comprando.
+Utilizamos as subqueries e fazemos um join de subqueries. 
+O campo em comum das duas consultas e o CPF do cliente.
+
+
+O inner join não será com uma tabela, mas com a query que fizemos anteriormente:
+Eu preciso dar um alias a esta subquery, então eu vou chamar de TV, de total de vendas:
+
+No join, o campo que vai fazer a ligação será o CPF, mas não podemos chamar por NF.CPF,
+porque como o on está sendo visualizado fora da subquery, ele tem como alias TV
+Vamos selecionar primeiro os campos da tabela de clientes: CPF, NOME, VOLUME_DE_COMPRA.
+E da tabela que é subquery, que tem o alias TV, eu vou selecionar os campos MES_ANO e QUANTIDADE_TOTAL*/
+
+SELECT 
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL 
+FROM TABELA_DE_CLIENTES AS TC 
+INNER JOIN (
+    SELECT NF.CPF, 
+    CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO, 
+    SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    GROUP BY NF.CPF, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) AS TV
+ON TV.CPF = TC.CPF;
+
+/*Depois de executar a consulta percebemos que no mês 04 do ano 2016
+no contrato (VOLUME_DE_COMPRA) era 25000, o cliente comprou nesse mês
+23352 litros de suco, ou sejá, menos do que foi combinado no contrato
+
+Alguns compraram menos outros mais do que foi estipulado no contrato
+
+Vamos fazer uma classificação para especificar quais são os clientes 
+que estão dentro ou que estão fora do limite especificado no contrato.
+
+Se o volume total (QUANTIDADE_TOTAL) for maior que o volume de compra(VOLUME_DE_COMPRA)
+,eu vou dizer, por exemplo, que as vendas foram inválidas. 
+Se o volume de compra(VOLUME_DE_COMPRA)  for maior ou igual que o volume total (QUANTIDADE_TOTAL)
+ as vendas foram válidas:*/
+
+ SELECT 
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL, 
+(CASE WHEN TC.VOLUME_DE_COMPRA >= TV.QUANTIDADE_TOTAL THEN 'VENDAS VÁLIDAS' 
+ELSE 'VENDAS INVÁLIDAS' END) AS RESULTADO 
+FROM TABELA_DE_CLIENTES AS TC 
+INNER JOIN (
+    SELECT NF.CPF, 
+    CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO, 
+    SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL 
+    FROM NOTAS_FISCAIS AS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    GROUP BY NF.CPF, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) AS TV
+ON TV.CPF = TC.CPF;
+
+/*Vamos filtrar essa consulta por mês e ano, porque eu não vou fazer isso para o ano todo.
+
+Se rodarmos essa consulta, vamos ver que, dentro do mês de Janeiro 
+de 2015, os clientes que compraram produtos e eu consigo ver quais 
+foram válidos e quais foram inválidos. Agora, eu vou apresentar esse
+relatório para o meu cliente e aí ele vai conseguir determinar quais
+foram os clientes que compraram dentro do volume de compras estipulado
+pelo contrato e os que compraram fora daquele volume de compras 
+estipulado pelo contrato.*/
+
+
+SELECT 
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL, 
+(CASE WHEN TC.VOLUME_DE_COMPRA >= TV.QUANTIDADE_TOTAL THEN 'VENDAS VÁLIDAS' 
+ELSE 'VENDAS INVÁLIDAS' END) AS RESULTADO 
+FROM TABELA_DE_CLIENTES AS TC 
+INNER JOIN (
+    SELECT NF.CPF, 
+    CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO, 
+    SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL 
+    FROM NOTAS_FISCAIS AS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    GROUP BY NF.CPF, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) AS TV
+ON TV.CPF = TC.CPF 
+WHERE TV.MES_ANO = '2015-01';
+
+--=========Desafio: complementando o relatório
+/*Construímos um relatório que apresentou os clientes que tiveram 
+vendas válidas e inválidas.
+
+Nesse sentido, nosso compromisso agora é que você complemente este
+relatório, isto é, listando somente os que tiveram vendas inválidas
+e calculando a diferença entre o limite de venda máximo e o realizado,
+em percentuais.
+
+Vamos fazer um filtro especial para somente os que tiveram seus 
+limites estourados, ou sejá, vai mostrar somente os que tiveram 
+vendas inválidas,que ultrapassaram o valor combinado no contrato.*/
+
+SELECT
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL,
+(CASE WHEN TC.VOLUME_DE_COMPRA >= TV.QUANTIDADE_TOTAL THEN 'VENDAS VÁLIDAS'
+ELSE 'VENDAS INVÁLIDAS' END) AS RESULTADO
+FROM TABELA_DE_CLIENTES TC
+INNER JOIN
+(
+SELECT 
+NF.CPF
+,CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO
+,SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+GROUP BY
+NF.CPF
+, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) TV
+ON TV.CPF = TC.CPF
+WHERE TV.MES_ANO = '2015-01'
+AND (TC.VOLUME_DE_COMPRA - TV.QUANTIDADE_TOTAL) < 0
+
+--E finalmente, então, inserimos o novo indicador.
+
+SELECT
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL,
+(CASE WHEN TC.VOLUME_DE_COMPRA >= TV.QUANTIDADE_TOTAL THEN 'VENDAS VÁLIDAS'
+ELSE 'VENDAS INVÁLIDAS' END) AS RESULTADO,
+(1 - (TC.VOLUME_DE_COMPRA/TV.QUANTIDADE_TOTAL)) * 100 AS PERCENTUAL
+FROM TABELA_DE_CLIENTES TC
+INNER JOIN
+(
+SELECT 
+NF.CPF
+,CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO
+,SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+GROUP BY
+NF.CPF
+, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) TV
+ON TV.CPF = TC.CPF
+WHERE TV.MES_ANO = '2015-01'
+AND (TC.VOLUME_DE_COMPRA - TV.QUANTIDADE_TOTAL) < 0;
+
+/*
+Arredondar o resultado para duas casas decimais.*/
+
+SELECT
+TC.CPF, TC.NOME, TC.VOLUME_DE_COMPRA, TV.MES_ANO, TV.QUANTIDADE_TOTAL,
+(CASE WHEN TC.VOLUME_DE_COMPRA >= TV.QUANTIDADE_TOTAL THEN 'VENDAS VÁLIDAS'
+ELSE 'VENDAS INVÁLIDAS' END) AS RESULTADO,
+ROUND((1 - (TC.VOLUME_DE_COMPRA/TV.QUANTIDADE_TOTAL)) * 100, 2) AS PERCENTUAL
+FROM TABELA_DE_CLIENTES TC
+INNER JOIN
+(
+SELECT 
+NF.CPF
+,CONVERT(VARCHAR(7), NF.DATA_VENDA, 120) AS MES_ANO
+,SUM(INF.QUANTIDADE) AS QUANTIDADE_TOTAL
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+GROUP BY
+NF.CPF
+, CONVERT(VARCHAR(7), NF.DATA_VENDA, 120)
+) TV
+ON TV.CPF = TC.CPF
+WHERE TV.MES_ANO = '2015-01'
+AND (TC.VOLUME_DE_COMPRA - TV.QUANTIDADE_TOTAL) < 0;
+
+
+--======= Vendas por sabor =========
+
+/*
+O usuário pediu um outro relatório, ele quer ver as vendas anuais,
+ou seja, as vendas dentro do ano, dos meus sucos de frutas por sabor.
+Mas não é só isso que ele quer não, ele quer que eu apresente esse
+relatório ordenado, do que mais vendeu para o que menos vendeu.
+
+Para eu ter as vendas por sabor, eu preciso ter o sabor, 
+que está na tabela de produtos, preciso ter a quantidade,
+que está na tabela dos itens das notas fiscais e preciso ter a 
+data da venda, que está na tabela de notas fiscais.
+Afinal, eu quero ver essa venda fechada no ano.
+
+Eu tenho um campo em cada tabela,
+então têm três tabelas que eu tenho que fazer o meu join. 
+Nós podemos fazer join entre mais do que duas tabelas.
+Então precisamos juntar essas três tabelas e pegar esses três campos,
+
+Eu vou criar uma nova consulta e nós vamos fazer 
+um join entre três tabelas
+
+Primeira coisa: a tabela de produtos tem uma ligação com a tabela 
+de itens de notas fiscais, através do campo CODIGO_DO_PRODUTO,
+que é o campo em comum entre essas duas tabelas:
+
+ Mas agora eu preciso ligar a tabela de itens com a tabela de 
+ notas. O campo em comum é o NUMERO:
+
+Eu preciso buscar o campo SABOR da tabela de produtos, o campo 
+QUANTIDADE da tabela de itens e o campo DATA_VENDA de notas fiscais:
+*/
+
+SELECT TP.SABOR, NF.DATA_VENDA, INF.QUANTIDADE 
+FROM TABELA_DE_PRODUTOS AS TP 
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+INNER JOIN NOTAS_FISCAIS AS NF  
+ON INF.NUMERO = NF.NUMERO;
+
+/*o meu usuário quer ver isso por ano. Então eu preciso agrupar:
+Eu tenho a minha venda agora por ano,*/
+
+SELECT TP.SABOR, 
+YEAR(NF.DATA_VENDA) AS ANO, 
+SUM(INF.QUANTIDADE) AS VENDA_ANO 
+FROM TABELA_DE_PRODUTOS AS TP 
+INNER JOIN ITENS_NOTAS_FISCAIS AS INF 
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+INNER JOIN NOTAS_FISCAIS AS NF 
+ON INF.NUMERO = NF.NUMERO
+GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA);
+
+/*
+ MAS preciso filtrar isso para um ano específico, 
+ porque ele não quer ver todos os anos,
+ ele quer ver isso ano a ano.
+
+Então vamos supor que eu vá selecionar o ano de 2015, 
+eu preciso colocar um where, lembrando que o where não
+fica depois do group by, ele fica antes
+*/
+
+SELECT TP.SABOR, 
+YEAR(NF.DATA_VENDA) AS ANO, 
+SUM(INF.QUANTIDADE) AS VENDA_ANO 
+FROM TABELA_DE_PRODUTOS TP 
+INNER JOIN ITENS_NOTAS_FISCAIS INF 
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+INNER JOIN NOTAS_FISCAIS NF 
+ON INF.NUMERO = NF.NUMERO 
+WHERE YEAR(NF.DATA_VENDA) = 2015 
+GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA);
+
+/*Só que o usuário quer isso ordenado da maior venda para a menor venda.
+Então para nós chegarmos a essa posição, colocamos um order by:*/
+
+SELECT TP.SABOR, 
+YEAR(NF.DATA_VENDA) AS ANO, 
+SUM(INF.QUANTIDADE) AS VENDA_ANO 
+FROM TABELA_DE_PRODUTOS TP 
+INNER JOIN ITENS_NOTAS_FISCAIS INF 
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+INNER JOIN NOTAS_FISCAIS NF 
+ON INF.NUMERO = NF.NUMERO 
+WHERE YEAR(NF.DATA_VENDA) = 2015 
+GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+ORDER BY SUM(INF.QUANTIDADE) DESC;
+
+/*[Então eu tenho um ranking, no ano de 2015,
+manga foi o sabor que mais vendeu, vendeu 601 mil, 
+depois vem laranja, melancia e assim por diante.
+
+Eu entreguei isso para o meu cliente, só que ele falou: 
+"gostei, mas eu queria uma coisa mais rebuscada, 
+eu quero colocar ter um percentual da participação 
+desta venda em relação à venda total do ano".
+
+Então por exemplo, se eu vender 1 milhão de litros 
+e se laranja vender 100 mil, laranja representou 
+10% das vendas do ano.
+
+Então o relatório voltou para mim, 
+porque tenho que colocar agora um percentual, 
+como é que eu vou colocar e calcular esse percentual?
+Vamos fazer o seguinte: primeiro vamos nos preocupar 
+em calcular esse total, eu vou agora fazer uma segunda query,
+onde eu vou calcular o total do ano:
+
+Para calcular o total do ano, preciso ter a quantidade,
+que estão na tabela de itens, e preciso ter a data da venda,
+que está na tabela de notas fiscais, e aí juntar essas duas 
+tabelas através do campo NUMERO:
+
+Como eu fiz um SUM, eu preciso de um group by
+
+E eu vou colocar o where, para filtrar o ano, para mostrar somente 2015:
+Se eu rodar essa segunda seleção, eu tenho aqui o total do ano.*/
+
+SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+FROM NOTAS_FISCAIS NF 
+INNER JOIN ITENS_NOTAS_FISCAIS INF 
+ON NF.NUMERO = INF.NUMERO 
+WHERE YEAR(NF.DATA_VENDA) = 2015 
+GROUP BY YEAR(NF.DATA_VENDA);
+
+/*Eu tenho duas consultas separadas, uma que me mostra o
+ranking do valor e outra que mostra o total.
+
+Para eu calcular a participação, eu preciso pegar o número
+de vendas por sabor no ano, dividir pelo número de vendas 
+totais do ano e multiplicar por 100, aí eu vou ter a 
+participação do sabor em relação ao total.
+
+Como é que eu consigo colocar juntar esses dois números?
+Com o join 
+E por qual campo em comum? 
+O campo ano.
+
+Então vamos lá, vamos fazer agora aqui um outro join,
+onde meu primeiro from será a primeira query que fizemos:
+E o inner join será a segunda query, que acabamos de fazer:
+Eu vou chamar a primeira query de VS, que tem a ver com venda 
+por sabor e a segunda query eu vou chamar de VA, que é a venda
+no ano. E o campo em comum é o campo ano, da consulta VS, com o
+campo ano, da consulta VA:
+Da tabela VS, eu vou selecionar os campos SABOR, ANO e VENDA_ANO, 
+e da tabela VA, eu vou selecionar o campo VENDA_TOTAL_ANO*/
+
+/* Note o erro, pois eu estou usando um order by dentro de uma subquery,
+isso não pode ser feito.*/
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, VA.VENDA_TOTAL_ANO 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+    ORDER BY SUM(INF.QUANTIDADE) DESC
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO;
+
+/*vou tirar o order by da subquery e ordenar a query final,
+porém não vamos mais ordenar pelo campo que estávamos ordenando
+antes, e sim ordenar pelo campo VS.VENDA_ANO:*/
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, VA.VENDA_TOTAL_ANO 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO 
+ORDER BY VS.VENDA_ANO DESC;
+
+/* Agora, para calcular o percentual, eu tenho que dividir 
+VENDA_ANO por VENDA_TOTAL_ANO e multiplicar por 100:
+
+Ao executar, vemos a coluna inteira com o valor 0, 
+por que isso está acontecendo? 
+É um problema de tipo de campo, pois eu estou dividindo 
+VS.VENDA_ANO por VA.VENDA_TOTAL_ANO, e esses dois valores
+estão vindo do campo INF.QUANTIDADE.
+
+O que acontece é que o campo QUANTIDADE é um inteiro. 
+Então o que acontece? Ele deveria ter sido criado como float,
+quando eu pego um inteiro e divido por outro inteiro, o SQL,
+se der um número menor do que 1, que é o nosso caso, porque eu
+estou dividindo a venda do sabor pela venda total, então sempre
+o numerador vai ser menor que o denominador nessa divisão, logo,
+o valor vai estar sempre o que? Menor que um.
+
+[16:59] Como não tem número inteiro, o SQL obrigatoriamente me dá
+como resultado um outro inteiro. E aí como esse valor dá menor que 
+1, eu só vejo 0. */
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, VA.VENDA_TOTAL_ANO, 
+    (VS.VENDA_ANO/VA.VENDA_TOTAL_ANO) * 100 AS PERCENTUAL 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO 
+ORDER BY VS.VENDA_ANO DESC;
+
+/*Para resolver esse problema, eu tenho que converter este campo para float:*/
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, VA.VENDA_TOTAL_ANO, 
+    (CONVERT(FLOAT, VS.VENDA_ANO) / CONVERT(FLOAT, VA.VENDA_TOTAL_ANO)) * 100 AS PERCENTUAL 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO 
+ORDER BY VS.VENDA_ANO DESC;
+
+/*Se eu rodar agora a minha consulta, vemos que resolveu. 
+Só que o meu usuário quer ver o percentual de participação 
+só com duas casas decimais. Então, sobre o valor todo, eu 
+vou aplicar o meu round com duas casas decimais:*/
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, VA.VENDA_TOTAL_ANO, 
+    ROUND((CONVERT(FLOAT, VS.VENDA_ANO) / CONVERT(FLOAT, VA.VENDA_TOTAL_ANO)) * 100, 2) AS PERCENTUAL 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO 
+ORDER BY VS.VENDA_ANO DESC;
+
+/*[18:59] O indicador VA.VENDA_TOTAL_ANO não precisa aparecer mais,
+pois eu não preciso ter o valor da venda total do ano repetido na
+coluna, então esse aqui eu tirar, ficando o resultado final da 
+seguinte forma:*/
+
+SELECT VS.SABOR, VS.ANO, VS.VENDA_ANO, 
+    ROUND((CONVERT(FLOAT, VS.VENDA_ANO) / CONVERT(FLOAT, VA.VENDA_TOTAL_ANO)) * 100, 2) AS PERCENTUAL 
+FROM (
+    SELECT TP.SABOR, 
+    YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_ANO 
+    FROM TABELA_DE_PRODUTOS TP 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO 
+    INNER JOIN NOTAS_FISCAIS NF 
+    ON INF.NUMERO = NF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA) 
+) VS 
+INNER JOIN (
+    SELECT YEAR(NF.DATA_VENDA) AS ANO, 
+    SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO 
+    FROM NOTAS_FISCAIS NF 
+    INNER JOIN ITENS_NOTAS_FISCAIS INF 
+    ON NF.NUMERO = INF.NUMERO 
+    WHERE YEAR(NF.DATA_VENDA) = 2015 
+    GROUP BY YEAR(NF.DATA_VENDA)
+) VA 
+ON VS.ANO = VA.ANO 
+ORDER BY VS.VENDA_ANO DESC;
+
+/* Então eu tenho para 2015, manga representou 16,78% das vendas totais,
+laranja 13,34%, melancia 13,23% e assim por diante.
+
+Se eu quiser ver isso para o ano de 2016, basta eu colocar 
+2016 nos dois where e aí executar a consulta de novo.*/
+
+--==========Desafio: vendas percentuais por tamanho==========
+
+/*Agora, a ideia é focar neste relatório novamente, porém que você modifique o relatório tendo como objetivo ver o
+ranking das vendas por tamanho.
+*/
+
+SELECT
+VS.SABOR, VS.ANO, VS.VENDA_ANO,
+ROUND((CONVERT( FLOAT, VS.VENDA_ANO) / CONVERT( FLOAT, VA.VENDA_TOTAL_ANO)) * 100, 2) AS PERCENTUAL
+FROM 
+(
+SELECT
+TP.SABOR
+,YEAR(NF.DATA_VENDA) AS ANO
+,SUM(INF.QUANTIDADE) AS VENDA_ANO
+FROM TABELA_DE_PRODUTOS TP
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO
+INNER JOIN NOTAS_FISCAIS NF
+ON INF.NUMERO = NF.NUMERO
+WHERE YEAR(NF.DATA_VENDA) = 2016
+GROUP BY TP.SABOR, YEAR(NF.DATA_VENDA)
+) VS
+INNER JOIN
+(
+SELECT 
+YEAR(NF.DATA_VENDA) AS ANO
+, SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+WHERE YEAR(NF.DATA_VENDA) = 2016
+GROUP BY YEAR(NF.DATA_VENDA)
+) VA
+ON VS.ANO = VA.ANO
+ORDER BY VS.VENDA_ANO DESC;
+
+/*Logo, faça um FIND/REPLACE na consulta substituindo onde temos SABOR por TAMANHO. Ficando assim.*/
+
+SELECT
+VS.TAMANHO, VS.ANO, VS.VENDA_ANO,
+ROUND((CONVERT( FLOAT, VS.VENDA_ANO) / CONVERT( FLOAT, VA.VENDA_TOTAL_ANO)) * 100, 2) AS PERCENTUAL
+FROM 
+(
+SELECT
+TP.TAMANHO
+,YEAR(NF.DATA_VENDA) AS ANO
+,SUM(INF.QUANTIDADE) AS VENDA_ANO
+FROM TABELA_DE_PRODUTOS TP
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON TP.CODIGO_DO_PRODUTO = INF.CODIGO_DO_PRODUTO
+INNER JOIN NOTAS_FISCAIS NF
+ON INF.NUMERO = NF.NUMERO
+WHERE YEAR(NF.DATA_VENDA) = 2016
+GROUP BY TP.TAMANHO, YEAR(NF.DATA_VENDA)
+) VS
+INNER JOIN
+(
+SELECT 
+YEAR(NF.DATA_VENDA) AS ANO
+, SUM(INF.QUANTIDADE) AS VENDA_TOTAL_ANO
+FROM NOTAS_FISCAIS NF
+INNER JOIN ITENS_NOTAS_FISCAIS INF
+ON NF.NUMERO = INF.NUMERO
+WHERE YEAR(NF.DATA_VENDA) = 2016
+GROUP BY YEAR(NF.DATA_VENDA)
+) VA
+ON VS.ANO = VA.ANO
+ORDER BY VS.VENDA_ANO DESC;
+
+/*Pronto, agora podemos dar por finalizada nossa demanda de modificar o relatório por ranking das vendas por tamanho.*/

@@ -49,7 +49,7 @@ o traço, mas optaremos pelo tamanho (8). Como há CEPs que iniciam em 0, o defini
 
 O limite de crédito refere-se a valores monetários e não requer um tamanho, então será do tipo [MONEY]
 
-O último campo, que chamamremos de [PRIMEIRA COMPRA], quer saber se o cliente já realizou alguma compra, então trata-se
+O último campo, que chamaremos de [PRIMEIRA COMPRA], quer saber se o cliente já realizou alguma compra, então trata-se
 de um campo lógico que definiremos como do tipo [BIT].*/
 
 
